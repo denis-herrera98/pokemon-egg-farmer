@@ -9,27 +9,12 @@
 #include <unistd.h>
 #include <string.h>
 
-// gcc main.c -o main -lX11 -lXtst -ltesseract -lleptonica
-
 #define POSX   0
 #define POSY   0
 #define HEIGHT 200
 #define WIDTH  600
 #define BORDER 15 
 
-// "Banette frisked Pelipper and found anitem!"
-// [Battle|Banette frisked Pelipper and found anitem!
-// [Battle|Banette frisked Pelipper and found anitem!
-
-// "Banette le ha robado P.Bella al Pelipper salvaje"
-// Banette le ha robado P. Bellaal Pelipper salvaje!
-
-// "Banette le ha robado Roca Lluvia al Pelipper salvaje"
-// Banette le ha robado Roca Lluviaal Pelipper salvaje!
-
-// "Escapas sin problemas"
-// Escapas sin problemas!
-//
 enum Actions {
     BLOCK,   
     ITEM_FOUND,
@@ -38,6 +23,9 @@ enum Actions {
     START_COMBAT,
     ATTACK,
     CHANGE_POKEMON,
+    START_FISHING,
+    ATTACK_LUV,
+    REMOVE_OBJECT,
 };
 
 bool blockCompleted = false;
@@ -45,13 +33,13 @@ bool isInCombat = false;
 bool wasItemFound = false;
 bool firstTimeAttacking = true;
 bool gotItem = false;
+bool isReadyToFight = false;
  
 void restartState(){ 
     blockCompleted = false;
     isInCombat = false;
     wasItemFound = false;
     firstTimeAttacking = true;
-    gotItem = false;
 }
 
 Window find_window_by_name(Display *display, Window root, const char *window_name) {
@@ -196,8 +184,6 @@ enum Actions getActionToExecute(char *text){
         return START_COMBAT;
     } 
 
-        printf("\nblock %b, wasItemFound %b, inCombat %b\n", blockCompleted, wasItemFound, isInCombat);
-        printf("\nblockCompleted = %d, wasItemFound = %d, isInCombat = %d\n", blockCompleted, wasItemFound, isInCombat);
     if (blockCompleted == 0 && wasItemFound && isInCombat) {
         printf("\nA ITEM WAS FOUND!!\n");
         return BLOCK;
@@ -215,9 +201,47 @@ enum Actions getActionToExecute(char *text){
 
     if (strstr(text, unwantedItem1) != NULL | strstr(text, unwantedItem2) != NULL) {
         printf("\nGOT UNWATED ITEM :(\n");
-        printf("\nGOT UNWATED ITEM :(\n");
-        printf("\nGOT UNWATED ITEM :(\n");
         return UNWANTED_ITEM;
+    } 
+
+    return 0;
+}
+
+
+enum Actions getActionToExecuteFishing(char *text){
+    
+    char* stoleItem = "le ha";
+    char* luvdisc = "frisked Luvdisc";
+    char* combatStarted = "aBanette";
+
+    if (strstr(text, combatStarted) != NULL && isReadyToFight) {
+        isInCombat = true;
+    }
+
+    if (strstr(text, stoleItem) != NULL && !isInCombat) {
+        return REMOVE_OBJECT;
+    }
+
+
+    if (isInCombat && strstr(text, stoleItem) != NULL) {
+        printf("\nITEM WAS STOLEN, LEAVING...\n");
+        gotItem = true;
+        return ESCAPE;
+    }
+
+    if (!isInCombat && !isReadyToFight) {
+        printf("\nSHOULD FISHING COMBAT!! \n");
+        return START_FISHING;
+    } 
+
+    if (isInCombat && wasItemFound == false) {
+        printf("\nEscaping!!\n");
+        return ESCAPE;
+    } 
+
+    if (isInCombat && wasItemFound) {
+        printf("\nHORDE! !:(\n");
+        return ATTACK_LUV;
     } 
 
     return 0;
@@ -265,6 +289,16 @@ void executeAction(Display *display, enum Actions action) {
             printf("Start combat action done.\n");
             isInCombat = true;
             break;
+        case START_FISHING:
+            printf("Starting combat action.\n");
+            simulate_keypress(display, XK_2);
+            break;
+        case ATTACK_LUV:
+            printf("Starting attack action.\n");
+            simulate_keypress(display, XK_Z);
+            simulate_keypress(display, XK_Z);
+            printf("attack action done.\n");
+            break;
         case CHANGE_POKEMON:
             printf("Starting combat action.\n");
             simulate_keypress(display, XK_Down); 
@@ -284,6 +318,17 @@ void executeAction(Display *display, enum Actions action) {
             simulate_keypress(display, XK_Z);
             printf("attack action done.\n");
             break;
+        case REMOVE_OBJECT:
+            printf("\nStarting removing action.\n");
+            simulate_keypress(display, XK_D);
+            simulate_keypress(display, XK_Z);
+            simulate_keypress(display, XK_Z);
+            simulate_keypress(display, XK_Z);
+            simulate_keypress(display, XK_Down); 
+            simulate_keypress(display, XK_Down); 
+            simulate_keypress(display, XK_Z);
+            gotItem = false;
+            printf("\nremoving action done.\n");
         default:
             printf("Unknown action.\n");
             break;
@@ -291,6 +336,62 @@ void executeAction(Display *display, enum Actions action) {
 }
 
 int main() {
+
+    Display *display = XOpenDisplay(NULL);
+
+
+    sleep(2);
+    while (1) {
+
+        printf("Starting fishing action.\n");
+        simulate_keypress(display, XK_2);
+        sleep(3);
+
+        int fightScreenShot = captureScreen(display, 450, 30, WIDTH, HEIGHT, "fishingDialog.ppm");
+        char* fishingDialogText = readImageText("fishingDialog.ppm");
+        if (fishingDialogText == NULL) {
+            return 1;
+        }
+
+        if (strstr(fishingDialogText, "picado") == NULL) {
+            simulate_keypress(display, XK_Z);
+            continue;
+        }
+        simulate_keypress(display, XK_Z);
+
+        printf("Waiting dialogs\n");
+        sleep(11);
+        printf("Waiting dialogs END\n");
+
+        int screenshotSuccess = captureScreen(display, POSX, 906, WIDTH, 150, "chatScreenshot.ppm");
+        if (screenshotSuccess != 0) {
+            return 1;
+        }
+
+        char* text = readImageText("chatScreenshot.ppm");
+        if (text == NULL) {
+            return 1;
+            break;
+        }
+
+        char* luvdisc = "frisked Luvdisc";
+        if (strstr(text, luvdisc) == NULL) {
+            executeAction(display, ESCAPE);
+            continue;
+        }
+
+        executeAction(display, ATTACK_LUV);
+        sleep(10);
+        executeAction(display, REMOVE_OBJECT);
+        free(text);
+    }
+
+    XCloseDisplay(display);
+
+    return 0;
+}
+
+int main1() {
 
     Display *display = XOpenDisplay(NULL);
 //    char* windowName = "РokеМMO";
@@ -321,9 +422,9 @@ int main() {
             break;
         }
 
-        bool isReadyToFight = strstr(fightText, "FIGHT BAG") != NULL;
+        isReadyToFight = strstr(fightText, "FIGHT BAG") != NULL;
 
-        if ((isReadyToFight || !isInCombat) && gotItem == false) {
+        if (isReadyToFight || !isInCombat || gotItem) {
 
             int screenshotSuccess = captureScreen(display, POSX, 830, WIDTH, HEIGHT, "chatScreenshot.ppm");
             if (screenshotSuccess != 0) {
@@ -338,7 +439,12 @@ int main() {
             }
 
             printf("LOOKING FOR ACTIONS TO EXECUTE");
-            enum Actions action = getActionToExecute(text);
+            enum Actions action = 0;
+            if (0) {
+                action = getActionToExecute(text);
+            } else {
+                action = getActionToExecuteFishing(text);
+            }
             executeAction(display, action);
             free(text);
             free(fightText);
