@@ -247,27 +247,68 @@ enum Actions getActionToExecuteFishing(char *text){
     return 0;
 }
 
-void simulate_keypress(Display *display, KeySym key) {
-    KeyCode keycode = XKeysymToKeycode(display, key);
-    
-    // Press the key
-    XTestFakeKeyEvent(display, keycode, True, 0);
-    XFlush(display);
+//void simulate_keypress(window, Display *display, KeySym key) {
+//    KeyCode keycode = XKeysymToKeycode(display, key);
+//    
+//    // Press the key
+//    XTestFakeKeyEvent(display, keycode, True, 0);
+//    XFlush(display);
+//
+//    // Release the key
+//    XTestFakeKeyEvent(display, keycode, False, 0);
+//    XFlush(display);
+//    sleep(1);
+//}
 
-    // Release the key
-    XTestFakeKeyEvent(display, keycode, False, 0);
-    XFlush(display);
-    sleep(1);
+Window get_focused_window(Display *display) {
+    Window focused_window;
+    int revert_to;
+    
+    // Get the currently focused window
+    XGetInputFocus(display, &focused_window, &revert_to);
+    
+    return focused_window;
 }
 
-void executeAction(Display *display, enum Actions action) {
+void simulate_keypress(Window window, Display *display, KeySym key) {
+    Window activeWindow = get_focused_window(display);
+
+//    printf("0x%lx\n", activeWindow);
+//    printf("0x%lx\n", window);
+    XKeyEvent event;
+    event.display = display;
+    event.window = window;
+    event.root = DefaultRootWindow(display);
+    event.subwindow = None;
+    event.time = CurrentTime;
+    event.x = 0;
+    event.y = 0;
+    event.x_root = 0;
+    event.y_root = 0;
+    event.same_screen = True;
+    event.state = 0;
+    event.keycode = XKeysymToKeycode(display, key);
+    event.type = KeyPress;
+
+    XSetInputFocus(display, window, RevertToNone, CurrentTime);
+    XSendEvent(display, window, True, KeyPressMask, (XEvent *)&event);
+    XFlush(display);
+    usleep(40000);
+    event.type = KeyRelease;
+    XSendEvent(display, window, True, KeyReleaseMask, (XEvent *)&event);
+    XSetInputFocus(display, activeWindow, RevertToNone, CurrentTime);
+    XFlush(display);
+}
+
+
+void executeAction(Window window, Display *display, enum Actions action) {
     switch (action) {
         case BLOCK:
             printf("Starting block action.\n");
-            simulate_keypress(display, XK_Z);
-            simulate_keypress(display, XK_Right); 
-            simulate_keypress(display, XK_Z);
-            simulate_keypress(display, XK_Z);
+            simulate_keypress(window, display, XK_Z);
+            simulate_keypress(window, display, XK_K); 
+            simulate_keypress(window, display, XK_Z);
+            simulate_keypress(window, display, XK_Z);
             printf("Block action done.\n");
             blockCompleted = true;
             break;
@@ -277,56 +318,56 @@ void executeAction(Display *display, enum Actions action) {
             break;
         case ESCAPE:
             printf("Starting escape action.\n");
-            simulate_keypress(display, XK_Down); 
-            simulate_keypress(display, XK_Right); 
-            simulate_keypress(display, XK_Z); 
+            simulate_keypress(window, display, XK_J); 
+            simulate_keypress(window, display, XK_K); 
+            simulate_keypress(window, display, XK_Z); 
             printf("Escape action done.\n");
             restartState();
             break;
         case START_COMBAT:
             printf("Starting combat action.\n");
-            simulate_keypress(display, XK_1);
+            simulate_keypress(window, display, XK_1);
             printf("Start combat action done.\n");
             isInCombat = true;
             break;
         case START_FISHING:
             printf("Starting combat action.\n");
-            simulate_keypress(display, XK_2);
+            simulate_keypress(window, display, XK_2);
             break;
         case ATTACK_LUV:
             printf("Starting attack action.\n");
-            simulate_keypress(display, XK_Z);
-            simulate_keypress(display, XK_Z);
+            simulate_keypress(window, display, XK_Z);
+            simulate_keypress(window, display, XK_Z);
             printf("attack action done.\n");
             break;
         case CHANGE_POKEMON:
             printf("Starting combat action.\n");
-            simulate_keypress(display, XK_Down); 
-            simulate_keypress(display, XK_Right); 
-            simulate_keypress(display, XK_Z); 
+            simulate_keypress(window, display, XK_J); 
+            simulate_keypress(window, display, XK_K); 
+            simulate_keypress(window, display, XK_Z); 
             printf("Start combat action done.\n");
             isInCombat = true;
             break;
         case ATTACK:
             printf("Starting attack action.\n");
-            simulate_keypress(display, XK_Z);
+            simulate_keypress(window, display, XK_Z);
             if (firstTimeAttacking){
-                simulate_keypress(display, XK_Left);
+                simulate_keypress(window, display, XK_J);
                 firstTimeAttacking = false;
             }
-            simulate_keypress(display, XK_Z);
-            simulate_keypress(display, XK_Z);
+            simulate_keypress(window, display, XK_Z);
+            simulate_keypress(window, display, XK_Z);
             printf("attack action done.\n");
             break;
         case REMOVE_OBJECT:
             printf("\nStarting removing action.\n");
-            simulate_keypress(display, XK_D);
-            simulate_keypress(display, XK_Z);
-            simulate_keypress(display, XK_Z);
-            simulate_keypress(display, XK_Z);
-            simulate_keypress(display, XK_Down); 
-            simulate_keypress(display, XK_Down); 
-            simulate_keypress(display, XK_Z);
+            simulate_keypress(window, display, XK_D);
+            simulate_keypress(window, display, XK_Z);
+            simulate_keypress(window, display, XK_Z);
+            simulate_keypress(window, display, XK_Z);
+            simulate_keypress(window, display, XK_J); 
+            simulate_keypress(window, display, XK_J); 
+            simulate_keypress(window, display, XK_Z);
             gotItem = false;
             printf("\nremoving action done.\n");
         default:
@@ -337,33 +378,46 @@ void executeAction(Display *display, enum Actions action) {
 
 int main() {
 
+    // Run i3-msg command
+//    fp = popen("i3-msg -s /run/user/1000/i3/ipc-socket.53867 -t get_tree", "r");
+//    if (fp == NULL) {
+//        perror("popen");
+//        return 1;
+//    }
+
     Display *display = XOpenDisplay(NULL);
 
+//xdotool windowfocus 56623111 key XK_J 
 
-    sleep(2);
+    // Window window = find_window_by_name(display, DefaultRootWindow(display), windowName);
+    
+    Window window = 0x3400007; 
+
     while (1) {
 
         printf("Starting fishing action.\n");
-        simulate_keypress(display, XK_2);
-        sleep(3);
+        simulate_keypress(window, display, XK_2);
+        sleep(4);
+        printf("Fishing completed, waiting for fishing dialog.\n");
 
-        int fightScreenShot = captureScreen(display, 450, 30, WIDTH, HEIGHT, "fishingDialog.ppm");
+        int fightScreenShot = captureScreen(display, 1920 + 450, 30, WIDTH, HEIGHT, "fishingDialog.ppm");
         char* fishingDialogText = readImageText("fishingDialog.ppm");
         if (fishingDialogText == NULL) {
             return 1;
         }
 
         if (strstr(fishingDialogText, "picado") == NULL) {
-            simulate_keypress(display, XK_Z);
+            printf("\nNothing captured\n");
+            simulate_keypress(window, display, XK_Z);
             continue;
         }
-        simulate_keypress(display, XK_Z);
 
+        simulate_keypress(window, display, XK_Z);
         printf("Waiting dialogs\n");
-        sleep(11);
+        sleep(13);
         printf("Waiting dialogs END\n");
 
-        int screenshotSuccess = captureScreen(display, POSX, 906, WIDTH, 150, "chatScreenshot.ppm");
+        int screenshotSuccess = captureScreen(display, 1920 + POSX, 906, WIDTH, 130, "chatScreenshot.ppm");
         if (screenshotSuccess != 0) {
             return 1;
         }
@@ -376,13 +430,16 @@ int main() {
 
         char* luvdisc = "frisked Luvdisc";
         if (strstr(text, luvdisc) == NULL) {
-            executeAction(display, ESCAPE);
+            printf("No item was found\n");
+            executeAction(window, display, ESCAPE);
+            sleep(4);
             continue;
         }
+        printf("ITEM FOUND!!\n");
 
-        executeAction(display, ATTACK_LUV);
-        sleep(10);
-        executeAction(display, REMOVE_OBJECT);
+        executeAction(window, display, ATTACK_LUV);
+        sleep(11);
+        executeAction(window, display, REMOVE_OBJECT);
         free(text);
     }
 
@@ -394,6 +451,7 @@ int main() {
 int main1() {
 
     Display *display = XOpenDisplay(NULL);
+    Window window = 52428807; // Window ID from your JSON data
 //    char* windowName = "РokеМMO";
 //    Window window = find_window_by_name(display, DefaultRootWindow(display), "РokеМMO");
 
@@ -401,6 +459,7 @@ int main1() {
  //       fprintf(stderr, "Unable to find %s\n window", windowName);
  //       return 1;
  //   }
+
 
     if (display == NULL) {
         fprintf(stderr, "Unable to open X display\n");
@@ -445,7 +504,7 @@ int main1() {
             } else {
                 action = getActionToExecuteFishing(text);
             }
-            executeAction(display, action);
+            executeAction(window, display, action);
             free(text);
             free(fightText);
 
