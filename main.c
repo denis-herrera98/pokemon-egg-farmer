@@ -439,7 +439,7 @@ int main2() {
         sleep(4);
         printf("Fishing completed, waiting for fishing dialog.\n");
 
-        int fightScreenShot = captureScreen(display, 1920 + 450, 30, WIDTH, HEIGHT, "fishingDialog.ppm");
+        int fightScreenShot = captureScreen(display, 450, 30, WIDTH, HEIGHT, "fishingDialog.ppm");
         char* fishingDialogText = readImageText("fishingDialog.ppm");
         if (fishingDialogText == NULL) {
             return 1;
@@ -456,7 +456,7 @@ int main2() {
         sleep(13);
         printf("Waiting dialogs END\n");
 
-        int screenshotSuccess = captureScreen(display, 1920 + POSX, 906, WIDTH, 130, "chatScreenshot.ppm");
+        int screenshotSuccess = captureScreen(display, POSX, 906, WIDTH, 130, "chatScreenshot.ppm");
         if (screenshotSuccess != 0) {
             return 1;
         }
@@ -502,7 +502,7 @@ int main1() {
 
         simulateKeyPressFocusWin(display, XK_3);
 
-        int fightScreenShot = captureScreen(display, 1920 + 300, 640, WIDTH, HEIGHT - 20, "readyToPlay.ppm");
+        int fightScreenShot = captureScreen(display, 300, 640, WIDTH, HEIGHT - 20, "readyToPlay.ppm");
         if (fightScreenShot != 0) {
             return 1;
             break;
@@ -518,7 +518,7 @@ int main1() {
 
         if (isReadyToFight || !isInCombat || gotItem) {
 
-            int screenshotSuccess = captureScreen(display, 1920 + POSX, 830, WIDTH, HEIGHT, "chatScreenshot.ppm");
+            int screenshotSuccess = captureScreen(display, POSX, 830, WIDTH, HEIGHT, "chatScreenshot.ppm");
             sleep(1);
 
             if (screenshotSuccess != 0) {
@@ -564,7 +564,7 @@ int main() {
     while (1) {
 
 
-        int fightScreenShot = captureScreen(display, 1920 + 300, 640, WIDTH, HEIGHT - 20, "readyToPlay.ppm");
+        int fightScreenShot = captureScreen(display, 300, 640, WIDTH, HEIGHT - 20, "readyToPlay.ppm");
         if (fightScreenShot != 0) {
             return 1;
             break;
@@ -581,7 +581,7 @@ int main() {
 
         if (isReadyToFight || strstr(fightText, "FIGHT") != NULL) {
 
-            int screenshotSuccess = captureScreen(display, 1920 + POSX, 906, WIDTH, 130, "chatScreenshot.ppm");
+            int screenshotSuccess = captureScreen(display, POSX, 906, WIDTH, 130, "chatScreenshot.ppm");
 
             if (screenshotSuccess != 0) {
                 return 1;
@@ -630,7 +630,7 @@ int main() {
             printf("THORWING POKEBALL DONE\n");
 
 
-            int capturedScreenshot = captureScreen(display, 1920 + POSX, 906, WIDTH, 130, "capturedScreenshot.ppm");
+            int capturedScreenshot = captureScreen(display, POSX, 906, WIDTH, 130, "capturedScreenshot.ppm");
             sleep(1);
 
             if (screenshotSuccess != 0) {
@@ -654,7 +654,7 @@ int main() {
                 simulateKeyPressFocusWin(display, XK_Z);
                 printf("POKEBALL WAS THREW\n");
 
-                capturedScreenshot = captureScreen(display, 1920 + POSX, 906, WIDTH, 130, "capturedScreenshot.ppm");
+                capturedScreenshot = captureScreen(display, POSX, 906, WIDTH, 130, "capturedScreenshot.ppm");
                 sleep(1);
 
                 if (screenshotSuccess != 0) {
